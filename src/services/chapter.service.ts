@@ -60,3 +60,32 @@ export const createChapter = async (data: CreateChapterData) => {
 
   return newChapter;
 };
+
+export const updateChapter = async (chapterId: string, data: { title?: string; chapterNumber?: number }) => {
+  const updatedChapter = await prisma.chapter.update({
+    where: { id: chapterId },
+    data,
+  });
+  return updatedChapter;
+};
+
+export const deleteChapter = async (chapterId: string) => {
+  // 1. Get chapter details to find the file path in Supabase
+  const chapter = await prisma.chapter.findUnique({
+    where: { id: chapterId },
+    select: { pdfUrl: true },
+  });
+
+  if (chapter && chapter.pdfUrl) {
+    // 2. Delete the file from Supabase Storage
+    const filePath = chapter.pdfUrl.substring(chapter.pdfUrl.indexOf(CHAPTERS_BUCKET));
+    const { error: deleteError } = await supabase.storage.from(CHAPTERS_BUCKET).remove([filePath]);
+    if (deleteError) {
+      // Log the error but don't block DB deletion if the file is already gone
+      console.error(`Supabase delete error: ${deleteError.message}`);
+    }
+  }
+
+  // 3. Delete the chapter from the database
+  await prisma.chapter.delete({ where: { id: chapterId } });
+};

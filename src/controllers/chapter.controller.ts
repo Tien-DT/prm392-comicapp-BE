@@ -29,3 +29,27 @@ export const createChapter = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error creating chapter', error: error.message });
   }
 };
+
+export const updateChapter = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chapterId } = req.params;
+    const { title, chapterNumber } = req.body;
+    const updatedChapter = await chapterService.updateChapter(chapterId, { 
+      title, 
+      chapterNumber: chapterNumber ? parseFloat(chapterNumber) : undefined 
+    });
+    res.status(200).json(updatedChapter);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error updating chapter', error: error.message });
+  }
+};
+
+export const deleteChapter = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chapterId } = req.params;
+    await chapterService.deleteChapter(chapterId);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error deleting chapter', error: error.message });
+  }
+};

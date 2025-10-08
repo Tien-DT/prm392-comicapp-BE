@@ -38,3 +38,13 @@ export const createReview = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error creating review', error: error.message });
   }
 };
+
+export const deleteReview = async (req: AuthRequest, res: Response) => {
+  try {
+    const { reviewId } = req.params;
+    await reviewService.deleteReview(reviewId);
+    res.status(204).send(); // 204 No Content is appropriate for a successful deletion
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error deleting review', error: error.message });
+  }
+};

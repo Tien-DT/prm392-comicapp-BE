@@ -69,3 +69,26 @@ export const createComic = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Error creating comic', error: error.message });
   }
 };
+
+export const updateComic = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedComic = await comicService.updateComic(id, updateData);
+    res.status(200).json(updatedComic);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error updating comic', error: error.message });
+  }
+};
+
+export const deleteComic = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    // Note: Add logic here to delete associated files from Supabase if needed
+    await comicService.deleteComic(id);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error deleting comic', error: error.message });
+  }
+};

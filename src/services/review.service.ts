@@ -39,3 +39,9 @@ export const createReview = async (data: CreateReviewData) => {
 
   return newReview;
 };
+
+export const deleteReview = async (reviewId: string) => {
+  await prisma.review.delete({
+    where: { id: reviewId },
+  });
+};

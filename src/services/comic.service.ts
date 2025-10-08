@@ -129,3 +129,43 @@ export const createComic = async (data: CreateComicData) => {
 
   return newComic;
 };
+
+interface UpdateComicData {
+  title?: string;
+  description?: string;
+  coverImage?: string;
+  status?: ComicStatus;
+  categoryIds?: string[];
+}
+
+export const updateComic = async (comicId: string, data: UpdateComicData) => {
+  const { categoryIds, ...otherData } = data;
+
+  const updatedComic = await prisma.comic.update({
+    where: { id: comicId },
+    data: {
+      ...otherData,
+      ...(categoryIds && {
+        categories: {
+          // Disconnect all existing categories first
+          deleteMany: {},
+          // Connect the new set of categories
+          create: categoryIds.map((id) => ({
+            category: {
+              connect: { id },
+            },
+          })),
+        },
+      }),
+    },
+  });
+
+  return updatedComic;
+};
+
+export const deleteComic = async (comicId: string) => {
+  // Prisma's cascading delete (defined in the schema via relations) will handle related records.
+  // However, you might need to manually delete objects in storage (e.g., Supabase) if required.
+  // For now, we only delete the database record.
+  await prisma.comic.delete({ where: { id: comicId } });
+};
