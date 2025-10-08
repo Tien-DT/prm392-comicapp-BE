@@ -24,3 +24,48 @@ export const getAllComics = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching comics', error: error.message });
   }
 };
+
+export const getComicById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const comic = await comicService.getComicById(id);
+
+    if (!comic) {
+      return res.status(404).json({ message: 'Comic not found' });
+    }
+
+    res.status(200).json(comic);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching comic details', error: error.message });
+  }
+};
+
+import { AuthRequest } from '../middlewares/auth.middleware';
+
+export const createComic = async (req: AuthRequest, res: Response) => {
+  try {
+    const { title, description, coverImage, status, categoryIds } = req.body;
+    const authorId = req.user?.id;
+
+    if (!authorId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    if (!title || !description || !coverImage || !categoryIds || !status) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const newComic = await comicService.createComic({
+      title,
+      description,
+      coverImage,
+      status,
+      authorId,
+      categoryIds,
+    });
+
+    res.status(201).json(newComic);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error creating comic', error: error.message });
+  }
+};

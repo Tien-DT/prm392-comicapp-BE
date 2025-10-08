@@ -70,3 +70,62 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
     },
   };
 };
+
+export const getComicById = async (id: string) => {
+  const comic = await prisma.comic.findUnique({
+    where: { id },
+    include: {
+      author: {
+        select: { id: true, username: true, avatar: true },
+      },
+      categories: {
+        select: {
+          category: {
+            select: { id: true, name: true },
+          },
+        },
+      },
+      chapters: {
+        orderBy: {
+          chapterNumber: 'asc',
+        },
+      },
+    },
+  });
+
+  return comic;
+};
+
+interface CreateComicData {
+  title: string;
+  description: string;
+  coverImage: string;
+  status: ComicStatus;
+  authorId: string;
+  categoryIds: string[];
+}
+
+export const createComic = async (data: CreateComicData) => {
+  const { title, description, coverImage, status, authorId, categoryIds } = data;
+
+  const newComic = await prisma.comic.create({
+    data: {
+      title,
+      description,
+      coverImage,
+      status,
+      author: {
+        connect: { id: authorId },
+      },
+      categories: {
+        create: categoryIds.map((id) => ({
+          category: {
+            connect: { id },
+          },
+        })),
+      },
+    },
+  });
+
+  return newComic;
+};
