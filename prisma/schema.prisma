@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS for status fields
+enum Role {
+  READER
+  CREATOR
+  ADMIN
+}
+
+enum ComicStatus {
+  ONGOING
+  COMPLETED
+}
+
+enum UserComicStatus {
+  NOT_STARTED
+  READING
+  FINISHED
+}
+
+// MODELS
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String
+  password  String?
+  avatar    String?
+  role      Role     @default(READER)
+  googleId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comics         Comic[]
+  reviews        Review[]
+  libraryEntries UserComicLibrary[]
+}
+
+model Comic {
+  id           String      @id @default(cuid())
+  title        String
+  description  String
+  coverImage   String
+  status       ComicStatus @default(ONGOING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  chapters  Chapter[]
+  reviews   Review[]
+
+  categories     CategoryOnComic[]
+  libraryEntries UserComicLibrary[]
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+
+  comics CategoryOnComic[]
+}
+
+// Explicit many-to-many relation table for Comic and Category
+model CategoryOnComic {
+  comicId    String
+  comic      Comic    @relation(fields: [comicId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([comicId, categoryId])
+}
+
+model Chapter {
+  id            String   @id @default(cuid())
+  title         String
+  chapterNumber Float
+  pdfUrl        String
+  createdAt     DateTime @default(now())
+
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id])
+}
+
+model Review {
+  id      String @id @default(cuid())
+  rating  Int // From 1 to 5
+  comment String
+
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id])
+}
+
+// Model for User's Library (Favorites, Reading Status, etc.)
+model UserComicLibrary {
+  isFavorited       Boolean         @default(false)
+  isDownloaded      Boolean         @default(false)
+  status            UserComicStatus @default(NOT_STARTED)
+  lastReadChapterId String?
+  updatedAt         DateTime        @updatedAt
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id])
+
+  @@id([userId, comicId])
+}
