@@ -8,10 +8,11 @@ interface GetAllComicsOptions {
   categoryId?: string;
   status?: ComicStatus;
   sort?: 'latest' | 'updated';
+  authorId?: string;
 }
 
 export const getAllComics = async (options: GetAllComicsOptions = {}) => {
-  const { page = 1, limit = 10, searchTerm, categoryId, status, sort } = options;
+  const { page = 1, limit = 10, searchTerm, categoryId, status, sort, authorId } = options;
 
   const skip = (page - 1) * limit;
   const take = limit;
@@ -36,6 +37,10 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
         categoryId: categoryId,
       },
     };
+  }
+
+  if (authorId) {
+    where.authorId = authorId;
   }
 
   // Determine sorting

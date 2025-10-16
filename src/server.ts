@@ -38,6 +38,7 @@ app.use('/api/users', userRouter);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // For top-level review actions like DELETE
 
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+  console.log(`⚡️[server]: Also accessible at http://192.168.2.238:${port}`);
 });

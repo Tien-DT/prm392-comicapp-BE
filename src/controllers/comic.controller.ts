@@ -11,6 +11,7 @@ export const getAllComics = async (req: Request, res: Response) => {
     const categoryId = req.query.categoryId as string | undefined;
     const status = req.query.status as ComicStatus | undefined;
     const sort = req.query.sort as 'latest' | 'updated' | undefined;
+    const authorId = req.query.authorId as string | undefined;
 
     const result = await comicService.getAllComics({
       page,
@@ -19,6 +20,7 @@ export const getAllComics = async (req: Request, res: Response) => {
       categoryId,
       status,
       sort,
+      authorId,
     });
 
     res.status(200).json(result);
