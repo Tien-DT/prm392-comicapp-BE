@@ -7,10 +7,11 @@ interface GetAllComicsOptions {
   searchTerm?: string;
   categoryId?: string;
   status?: ComicStatus;
+  sort?: 'latest' | 'updated';
 }
 
 export const getAllComics = async (options: GetAllComicsOptions = {}) => {
-  const { page = 1, limit = 10, searchTerm, categoryId, status } = options;
+  const { page = 1, limit = 10, searchTerm, categoryId, status, sort } = options;
 
   const skip = (page - 1) * limit;
   const take = limit;
@@ -37,6 +38,14 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
     };
   }
 
+  // Determine sorting
+  let orderBy: any = { updatedAt: 'desc' }; // default
+  if (sort === 'latest') {
+    orderBy = { createdAt: 'desc' };
+  } else if (sort === 'updated') {
+    orderBy = { updatedAt: 'desc' };
+  }
+
   // Fetch comics and total count in parallel
   const [comics, totalComics] = await Promise.all([
     prisma.comic.findMany({
@@ -53,9 +62,7 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
           },
         },
       },
-      orderBy: {
-        updatedAt: 'desc',
-      },
+      orderBy,
     }),
     prisma.comic.count({ where }),
   ]);

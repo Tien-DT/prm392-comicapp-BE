@@ -2,6 +2,17 @@ import { Response } from 'express';
 import * as chapterService from '../services/chapter.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
+export const getChaptersForComic = async (req: AuthRequest, res: Response) => {
+  try {
+    const comicId = req.params.id;
+    const chapters = await chapterService.getChaptersForComic(comicId);
+    res.status(200).json(chapters);
+  } catch (error: any) {
+    console.error('Get Chapters Error:', error);
+    res.status(500).json({ message: 'Error fetching chapters', error: error.message });
+  }
+};
+
 export const createChapter = async (req: AuthRequest, res: Response) => {
   try {
     const comicId = req.params.id;

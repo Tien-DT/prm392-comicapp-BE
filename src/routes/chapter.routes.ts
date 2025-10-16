@@ -47,6 +47,30 @@ router.route('/')
   /**
    * @swagger
    * /api/comics/{id}/chapters:
+   *   get:
+   *     summary: Get all chapters for a comic
+   *     tags: [Chapters]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the comic.
+   *     responses:
+   *       200:
+   *         description: A list of chapters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Chapter'
+   */
+  .get(chapterController.getChaptersForComic)
+  /**
+   * @swagger
+   * /api/comics/{id}/chapters:
    *   post:
    *     summary: Upload a new chapter for a comic
    *     tags: [Chapters]

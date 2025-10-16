@@ -10,6 +10,21 @@ interface CreateChapterData {
 
 const CHAPTERS_BUCKET = 'comic-chapters';
 
+export const getChaptersForComic = async (comicId: string) => {
+  const chapters = await prisma.chapter.findMany({
+    where: { comicId },
+    orderBy: { chapterNumber: 'asc' },
+    select: {
+      id: true,
+      title: true,
+      chapterNumber: true,
+      pdfUrl: true,
+      createdAt: true,
+    },
+  });
+  return chapters;
+};
+
 export const createChapter = async (data: CreateChapterData) => {
   const { comicId, title, chapterNumber, file } = data;
 
