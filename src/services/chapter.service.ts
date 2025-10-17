@@ -33,15 +33,23 @@ export const createChapter = async (data: CreateChapterData) => {
   const fileName = `${comicId}-${Date.now()}.${fileExtension}`;
   const filePath = `${comicId}/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(CHAPTERS_BUCKET)
-    .upload(filePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false,
-    });
+  try {
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(CHAPTERS_BUCKET)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
 
-  if (uploadError) {
-    throw new Error(`Supabase upload error: ${uploadError.message}`);
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      throw new Error(`Supabase upload error: ${uploadError.message}`);
+    }
+
+    console.log('File uploaded successfully:', uploadData);
+  } catch (error: any) {
+    console.error('Upload failed with exception:', error);
+    throw new Error(`Supabase upload error: ${error.message}`);
   }
 
   // 2. Get public URL of the uploaded file

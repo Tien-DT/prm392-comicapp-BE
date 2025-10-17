@@ -25,6 +25,9 @@ const router = Router();
  *         status:
  *           type: string
  *           enum: [ONGOING, COMPLETED]
+ *         visibility:
+ *           type: string
+ *           enum: [PRIVATE, PUBLIC]
  *         author:
  *           type: object
  *           properties:
@@ -84,6 +87,12 @@ router.route('/')
    *           type: string
    *           enum: [ONGOING, COMPLETED]
    *         description: Filter by comic status.
+   *       - in: query
+   *         name: visibility
+   *         schema:
+   *           type: string
+   *           enum: [PRIVATE, PUBLIC]
+   *         description: Filter by visibility (PRIVATE comics only visible to owner).
    *     responses:
    *       200:
    *         description: A paginated list of comics.
@@ -139,6 +148,10 @@ router.route('/')
    *               status:
    *                 type: string
    *                 enum: [ONGOING, COMPLETED]
+   *               visibility:
+   *                 type: string
+   *                 enum: [PRIVATE, PUBLIC]
+   *                 default: PUBLIC
    *               categoryIds:
    *                 type: array
    *                 items:
@@ -202,6 +215,9 @@ router.route('/:id')
    *               status:
    *                 type: string
    *                 enum: [ONGOING, COMPLETED]
+   *               visibility:
+   *                 type: string
+   *                 enum: [PRIVATE, PUBLIC]
    *               categoryIds:
    *                 type: array
    *                 items:

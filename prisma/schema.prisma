@@ -28,6 +28,11 @@ enum UserComicStatus {
   FINISHED
 }
 
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
 // MODELS
 
 model User {
@@ -52,6 +57,7 @@ model Comic {
   description  String
   coverImage   String
   status       ComicStatus @default(ONGOING)
+  visibility   Visibility  @default(PUBLIC)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { ComicStatus } from '@prisma/client';
+import { ComicStatus, Visibility } from '@prisma/client';
 
 interface GetAllComicsOptions {
   page?: number;
@@ -9,10 +9,12 @@ interface GetAllComicsOptions {
   status?: ComicStatus;
   sort?: 'latest' | 'updated';
   authorId?: string;
+  visibility?: Visibility;
+  currentUserId?: string;
 }
 
 export const getAllComics = async (options: GetAllComicsOptions = {}) => {
-  const { page = 1, limit = 10, searchTerm, categoryId, status, sort, authorId } = options;
+  const { page = 1, limit = 10, searchTerm, categoryId, status, sort, authorId, visibility, currentUserId } = options;
 
   const skip = (page - 1) * limit;
   const take = limit;
@@ -41,6 +43,21 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
 
   if (authorId) {
     where.authorId = authorId;
+  }
+
+  // Visibility filter logic
+  if (visibility) {
+    where.visibility = visibility;
+  } else {
+    // If no specific visibility requested, apply smart filtering:
+    // - Show PUBLIC comics to everyone
+    // - Show PRIVATE comics only if viewing own comics (authorId === currentUserId)
+    if (authorId && currentUserId && authorId === currentUserId) {
+      // User viewing their own comics - show all
+    } else {
+      // Public view or viewing other's comics - only PUBLIC
+      where.visibility = Visibility.PUBLIC;
+    }
   }
 
   // Determine sorting
@@ -115,10 +132,11 @@ interface CreateComicData {
   status: ComicStatus;
   authorId: string;
   categoryIds: string[];
+  visibility?: Visibility;
 }
 
 export const createComic = async (data: CreateComicData) => {
-  const { title, description, coverImage, status, authorId, categoryIds } = data;
+  const { title, description, coverImage, status, authorId, categoryIds, visibility } = data;
 
   const newComic = await prisma.comic.create({
     data: {
@@ -126,6 +144,7 @@ export const createComic = async (data: CreateComicData) => {
       description,
       coverImage,
       status,
+      visibility: visibility || Visibility.PUBLIC,
       author: {
         connect: { id: authorId },
       },
@@ -148,6 +167,7 @@ interface UpdateComicData {
   coverImage?: string;
   status?: ComicStatus;
   categoryIds?: string[];
+  visibility?: Visibility;
 }
 
 export const updateComic = async (comicId: string, data: UpdateComicData) => {

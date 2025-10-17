@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import * as comicService from '../services/comic.service';
-import { ComicStatus } from '@prisma/client';
+import { ComicStatus, Visibility } from '@prisma/client';
+import { AuthRequest } from '../middlewares/auth.middleware';
 
-export const getAllComics = async (req: Request, res: Response) => {
+export const getAllComics = async (req: AuthRequest, res: Response) => {
   try {
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
@@ -12,6 +13,8 @@ export const getAllComics = async (req: Request, res: Response) => {
     const status = req.query.status as ComicStatus | undefined;
     const sort = req.query.sort as 'latest' | 'updated' | undefined;
     const authorId = req.query.authorId as string | undefined;
+    const visibility = req.query.visibility as Visibility | undefined;
+    const currentUserId = req.user?.id;
 
     const result = await comicService.getAllComics({
       page,
@@ -21,6 +24,8 @@ export const getAllComics = async (req: Request, res: Response) => {
       status,
       sort,
       authorId,
+      visibility,
+      currentUserId,
     });
 
     res.status(200).json(result);
@@ -44,11 +49,9 @@ export const getComicById = async (req: Request, res: Response) => {
   }
 };
 
-import { AuthRequest } from '../middlewares/auth.middleware';
-
 export const createComic = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, coverImage, status, categoryIds } = req.body;
+    const { title, description, coverImage, status, categoryIds, visibility } = req.body;
     const authorId = req.user?.id;
 
     if (!authorId) {
@@ -66,6 +69,7 @@ export const createComic = async (req: AuthRequest, res: Response) => {
       status,
       authorId,
       categoryIds,
+      visibility,
     });
 
     res.status(201).json(newComic);
