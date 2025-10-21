@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as comicController from '../controllers/comic.controller';
 import { protect } from '../middlewares/auth.middleware';
+import { optionalAuth } from '../middlewares/optionalAuth.middleware';
 import { isAuthor } from '../middlewares/comic.middleware';
 import chapterRouter from './chapter.routes';
 import reviewRouter from './review.routes';
@@ -93,6 +94,17 @@ router.route('/')
    *           type: string
    *           enum: [PRIVATE, PUBLIC]
    *         description: Filter by visibility (PRIVATE comics only visible to owner).
+   *       - in: query
+   *         name: authorId
+   *         schema:
+   *           type: string
+   *         description: Filter by author/creator ID. When authenticated user's ID matches authorId, shows both PUBLIC and PRIVATE comics. Otherwise, shows only PUBLIC comics.
+   *       - in: query
+   *         name: sort
+   *         schema:
+   *           type: string
+   *           enum: [latest, updated]
+   *         description: Sort order (latest = by createdAt, updated = by updatedAt).
    *     responses:
    *       200:
    *         description: A paginated list of comics.
@@ -117,7 +129,7 @@ router.route('/')
    *                     limit:
    *                       type: integer
    */
-  .get(comicController.getAllComics)
+  .get(optionalAuth, comicController.getAllComics)
   /**
    * @swagger
    * /api/comics:

@@ -16,6 +16,14 @@ export const getAllComics = async (req: AuthRequest, res: Response) => {
     const visibility = req.query.visibility as Visibility | undefined;
     const currentUserId = req.user?.id;
 
+    console.log('🔍 [getAllComics] Query params:', {
+      authorId,
+      currentUserId,
+      hasAuth: !!req.user,
+      userId: req.user?.id,
+      visibility
+    });
+
     const result = await comicService.getAllComics({
       page,
       limit,
@@ -28,8 +36,16 @@ export const getAllComics = async (req: AuthRequest, res: Response) => {
       currentUserId,
     });
 
+    console.log('✅ [getAllComics] Result:', {
+      totalComics: result.data.length,
+      authorId,
+      currentUserId,
+      comics: result.data.map(c => ({ id: c.id, title: c.title, visibility: c.visibility }))
+    });
+
     res.status(200).json(result);
   } catch (error: any) {
+    console.error('❌ [getAllComics] Error:', error);
     res.status(500).json({ message: 'Error fetching comics', error: error.message });
   }
 };

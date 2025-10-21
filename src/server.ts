@@ -30,15 +30,18 @@ import comicRouter from './routes/comic.routes';
 import libraryRouter from './routes/library.routes';
 import reviewRouter from './routes/review.routes';
 import userRouter from './routes/user.routes';
+import meRouter from './routes/me.routes';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 
 app.use('/api/auth', authRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/comics', comicRouter);
-app.use('/api/me/library', libraryRouter);
-app.use('/api/reviews', reviewRouter);
 app.use('/api/users', userRouter);
+app.use('/api/reviews', reviewRouter);
+// IMPORTANT: Specific routes must come before general routes
+app.use('/api/me/library', libraryRouter);  // More specific - must be first
+app.use('/api/me', meRouter);               // General /me routes - must be after /me/library
 
 // Swagger UI Route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

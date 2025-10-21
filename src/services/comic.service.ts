@@ -83,6 +83,9 @@ export const getAllComics = async (options: GetAllComicsOptions = {}) => {
             category: true,
           },
         },
+        _count: {
+          select: { chapters: true },
+        },
       },
       orderBy,
     }),
