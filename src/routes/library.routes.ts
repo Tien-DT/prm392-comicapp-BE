@@ -140,4 +140,6 @@ router.post('/', libraryController.upsertLibraryEntry);
  */
 router.put('/progress', libraryController.updateReadingProgress);
 
+router.get('/:comicId', libraryController.getLibraryEntry);
+
 export default router;
