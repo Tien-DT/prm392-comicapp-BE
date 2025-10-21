@@ -1,0 +1,161 @@
+// IMPROVED PRISMA SCHEMA FOR COMIC APP
+// This schema includes all performance and data integrity improvements
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum Role {
+  READER
+  CREATOR
+  ADMIN
+}
+
+enum ComicStatus {
+  ONGOING
+  COMPLETED
+}
+
+enum UserComicStatus {
+  NOT_STARTED
+  READING
+  FINISHED
+}
+
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
+// MODELS
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  username   String
+  password   String?
+  avatar     String?
+  role       Role     @default(READER)
+  googleId   String?  @unique
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  comics         Comic[]
+  reviews        Review[]
+  libraryEntries UserComicLibrary[]
+}
+
+model Comic {
+  id             String      @id @default(cuid())
+  title          String
+  description    String
+  coverImage     String
+  status         ComicStatus @default(ONGOING)
+  visibility     Visibility  @default(PUBLIC)
+  
+  // Statistics - cached for performance
+  viewCount      Int         @default(0)
+  likeCount      Int         @default(0)
+  averageRating  Float       @default(0)
+  totalReviews   Int         @default(0)
+  totalChapters  Int         @default(0)
+  
+  // Soft delete support
+  deletedAt      DateTime?
+  
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  chapters       Chapter[]            @relation(onDelete: Cascade)
+  reviews        Review[]             @relation(onDelete: Cascade)
+  categories     CategoryOnComic[]    @relation(onDelete: Cascade)
+  libraryEntries UserComicLibrary[]   @relation(onDelete: Cascade)
+
+  // Indexes for performance
+  @@index([title])
+  @@index([status])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([deletedAt])
+  @@index([visibility])
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+
+  comics CategoryOnComic[]
+}
+
+model CategoryOnComic {
+  comicId    String
+  comic      Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([comicId, categoryId])
+  @@index([categoryId])
+}
+
+model Chapter {
+  id            String   @id @default(cuid())
+  title         String
+  chapterNumber Float
+  pdfUrl        String
+  readCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+
+  @@index([comicId])
+  @@index([comicId, chapterNumber])
+  @@unique([comicId, chapterNumber])
+}
+
+model Review {
+  id      String @id @default(cuid())
+  rating  Int    // 1 to 5
+  comment String
+
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+
+  @@index([comicId])
+  @@index([userId])
+  @@unique([userId, comicId])
+}
+
+model UserComicLibrary {
+  isFavorited       Boolean         @default(false)
+  isDownloaded      Boolean         @default(false)
+  status            UserComicStatus @default(NOT_STARTED)
+  lastReadChapterId String?
+  updatedAt         DateTime        @updatedAt
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comicId String
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+
+  @@id([userId, comicId])
+  @@index([userId, isFavorited])
+  @@index([userId, status])
+  @@index([updatedAt])
+}

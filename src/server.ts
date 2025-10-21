@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 
 dotenv.config();
 
@@ -8,7 +9,12 @@ const app: Express = express();
 const port = parseInt(process.env.PORT || '3000', 10);
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -35,10 +41,14 @@ app.use('/api/reviews', reviewRouter);
 app.use('/api/users', userRouter);
 
 // Swagger UI Route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec)); // For top-level review actions like DELETE
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Error handling - must be after all routes
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
   console.log(`⚡️[server]: Also accessible at http://192.168.2.238:${port}`);
+  console.log(`📚[server]: API Documentation at http://localhost:${port}/api-docs`);
 });

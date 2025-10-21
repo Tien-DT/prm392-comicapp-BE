@@ -33,6 +33,8 @@ export const createChapter = async (data: CreateChapterData) => {
   const fileName = `${comicId}-${Date.now()}.${fileExtension}`;
   const filePath = `${comicId}/${fileName}`;
 
+  let uploadedFilePath: string | null = null;
+
   try {
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(CHAPTERS_BUCKET)
@@ -46,6 +48,7 @@ export const createChapter = async (data: CreateChapterData) => {
       throw new Error(`Supabase upload error: ${uploadError.message}`);
     }
 
+    uploadedFilePath = filePath;
     console.log('File uploaded successfully:', uploadData);
   } catch (error: any) {
     console.error('Upload failed with exception:', error);
@@ -58,30 +61,44 @@ export const createChapter = async (data: CreateChapterData) => {
     .getPublicUrl(filePath);
 
   if (!urlData || !urlData.publicUrl) {
+    // Rollback: delete uploaded file
+    if (uploadedFilePath) {
+      await supabase.storage.from(CHAPTERS_BUCKET).remove([uploadedFilePath]);
+    }
     throw new Error('Could not get public URL for the uploaded file.');
   }
 
   const pdfUrl = urlData.publicUrl;
 
   // 3. Create chapter record in the database and update the comic's updatedAt timestamp
-  const [, newChapter] = await prisma.$transaction([
-    prisma.comic.update({
-      where: { id: comicId },
-      data: { updatedAt: new Date() },
-    }),
-    prisma.chapter.create({
-      data: {
-        title,
-        chapterNumber,
-        pdfUrl,
-        comic: {
-          connect: { id: comicId },
+  try {
+    const [, newChapter] = await prisma.$transaction([
+      prisma.comic.update({
+        where: { id: comicId },
+        data: { updatedAt: new Date() },
+      }),
+      prisma.chapter.create({
+        data: {
+          title,
+          chapterNumber,
+          pdfUrl,
+          comic: {
+            connect: { id: comicId },
+          },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return newChapter;
+    return newChapter;
+  } catch (dbError: any) {
+    // Rollback: delete uploaded file if DB transaction fails
+    console.error('Database transaction failed:', dbError);
+    if (uploadedFilePath) {
+      console.log('Rolling back uploaded file...');
+      await supabase.storage.from(CHAPTERS_BUCKET).remove([uploadedFilePath]);
+    }
+    throw new Error(`Failed to create chapter: ${dbError.message}`);
+  }
 };
 
 export const updateChapter = async (chapterId: string, data: { title?: string; chapterNumber?: number }) => {
@@ -101,11 +118,23 @@ export const deleteChapter = async (chapterId: string) => {
 
   if (chapter && chapter.pdfUrl) {
     // 2. Delete the file from Supabase Storage
-    const filePath = chapter.pdfUrl.substring(chapter.pdfUrl.indexOf(CHAPTERS_BUCKET));
-    const { error: deleteError } = await supabase.storage.from(CHAPTERS_BUCKET).remove([filePath]);
-    if (deleteError) {
-      // Log the error but don't block DB deletion if the file is already gone
-      console.error(`Supabase delete error: ${deleteError.message}`);
+    try {
+      // Extract file path from URL: https://xxx.supabase.co/storage/v1/object/public/comic-chapters/comicId/file.pdf
+      const url = new URL(chapter.pdfUrl);
+      const pathMatch = url.pathname.match(new RegExp(`/object/public/${CHAPTERS_BUCKET}/(.+)$`));
+      
+      if (pathMatch && pathMatch[1]) {
+        const filePath = pathMatch[1];
+        const { error: deleteError } = await supabase.storage.from(CHAPTERS_BUCKET).remove([filePath]);
+        if (deleteError) {
+          // Log the error but don't block DB deletion if the file is already gone
+          console.error(`Supabase delete error: ${deleteError.message}`);
+        }
+      } else {
+        console.warn(`Could not parse file path from URL: ${chapter.pdfUrl}`);
+      }
+    } catch (error) {
+      console.error(`Error parsing PDF URL for deletion:`, error);
     }
   }
 

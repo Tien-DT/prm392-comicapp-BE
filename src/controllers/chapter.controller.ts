@@ -37,7 +37,7 @@ export const createChapter = async (req: AuthRequest, res: Response) => {
     res.status(201).json(newChapter);
   } catch (error: any) {
     console.error('Create Chapter Error:', error);
-    res.status(500).json({ message: 'Error creating chapter', error: error.message });
+    res.status(500).json({ message: error.message || 'Error creating chapter' });
   }
 };
 
