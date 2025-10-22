@@ -101,20 +101,44 @@ export const createChapter = async (data: CreateChapterData) => {
   }
 };
 
-export const updateChapter = async (chapterId: string, data: { title?: string; chapterNumber?: number }) => {
-  const updatedChapter = await prisma.chapter.update({
-    where: { id: chapterId },
-    data,
+export const updateChapter = async (
+  chapterId: string,
+  comicId: string,
+  data: { title?: string; chapterNumber?: number }
+) => {
+  const existing = await prisma.chapter.findFirst({
+    where: { id: chapterId, comicId },
+    select: { id: true },
   });
+
+  if (!existing) {
+    throw new Error('Chapter not found for this comic');
+  }
+
+  const [updatedChapter] = await prisma.$transaction([
+    prisma.chapter.update({
+      where: { id: chapterId },
+      data,
+    }),
+    prisma.comic.update({
+      where: { id: comicId },
+      data: { updatedAt: new Date() },
+    }),
+  ]);
+
   return updatedChapter;
 };
 
-export const deleteChapter = async (chapterId: string) => {
+export const deleteChapter = async (chapterId: string, comicId: string) => {
   // 1. Get chapter details to find the file path in Supabase
-  const chapter = await prisma.chapter.findUnique({
-    where: { id: chapterId },
+  const chapter = await prisma.chapter.findFirst({
+    where: { id: chapterId, comicId },
     select: { pdfUrl: true },
   });
+
+  if (!chapter) {
+    throw new Error('Chapter not found for this comic');
+  }
 
   if (chapter && chapter.pdfUrl) {
     // 2. Delete the file from Supabase Storage
@@ -139,5 +163,11 @@ export const deleteChapter = async (chapterId: string) => {
   }
 
   // 3. Delete the chapter from the database
-  await prisma.chapter.delete({ where: { id: chapterId } });
+  await prisma.$transaction([
+    prisma.chapter.delete({ where: { id: chapterId } }),
+    prisma.comic.update({
+      where: { id: comicId },
+      data: { updatedAt: new Date() },
+    }),
+  ]);
 };

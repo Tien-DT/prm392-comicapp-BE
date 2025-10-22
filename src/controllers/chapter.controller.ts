@@ -43,24 +43,32 @@ export const createChapter = async (req: AuthRequest, res: Response) => {
 
 export const updateChapter = async (req: AuthRequest, res: Response) => {
   try {
+    const comicId = req.params.id;
     const { chapterId } = req.params;
     const { title, chapterNumber } = req.body;
-    const updatedChapter = await chapterService.updateChapter(chapterId, { 
-      title, 
-      chapterNumber: chapterNumber ? parseFloat(chapterNumber) : undefined 
+    const updatedChapter = await chapterService.updateChapter(
+      chapterId,
+      comicId,
+      {
+        title,
+        chapterNumber: chapterNumber ? parseFloat(chapterNumber) : undefined,
+      }
     });
     res.status(200).json(updatedChapter);
   } catch (error: any) {
-    res.status(500).json({ message: 'Error updating chapter', error: error.message });
+    const status = error.message?.includes('Chapter not found') ? 404 : 500;
+    res.status(status).json({ message: error.message || 'Error updating chapter' });
   }
 };
 
 export const deleteChapter = async (req: AuthRequest, res: Response) => {
   try {
     const { chapterId } = req.params;
-    await chapterService.deleteChapter(chapterId);
+    const comicId = req.params.id;
+    await chapterService.deleteChapter(chapterId, comicId);
     res.status(204).send();
   } catch (error: any) {
-    res.status(500).json({ message: 'Error deleting chapter', error: error.message });
+    const status = error.message?.includes('Chapter not found') ? 404 : 500;
+    res.status(status).json({ message: error.message || 'Error deleting chapter' });
   }
 };
