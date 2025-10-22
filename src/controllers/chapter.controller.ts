@@ -1,4 +1,4 @@
-import { Response } from 'express';
+﻿import { Response } from 'express';
 import * as chapterService from '../services/chapter.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 
@@ -52,8 +52,9 @@ export const updateChapter = async (req: AuthRequest, res: Response) => {
       {
         title,
         chapterNumber: chapterNumber ? parseFloat(chapterNumber) : undefined,
-      }
-    });
+      },
+      req.file || undefined
+    );
     res.status(200).json(updatedChapter);
   } catch (error: any) {
     const status = error.message?.includes('Chapter not found') ? 404 : 500;
@@ -72,3 +73,4 @@ export const deleteChapter = async (req: AuthRequest, res: Response) => {
     res.status(status).json({ message: error.message || 'Error deleting chapter' });
   }
 };
+

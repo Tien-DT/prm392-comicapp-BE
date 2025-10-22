@@ -104,29 +104,97 @@ export const createChapter = async (data: CreateChapterData) => {
 export const updateChapter = async (
   chapterId: string,
   comicId: string,
-  data: { title?: string; chapterNumber?: number }
+  data: { title?: string; chapterNumber?: number },
+  file?: Express.Multer.File
 ) => {
   const existing = await prisma.chapter.findFirst({
     where: { id: chapterId, comicId },
-    select: { id: true },
+    select: { id: true, pdfUrl: true },
   });
 
   if (!existing) {
     throw new Error('Chapter not found for this comic');
   }
 
-  const [updatedChapter] = await prisma.$transaction([
-    prisma.chapter.update({
-      where: { id: chapterId },
-      data,
-    }),
-    prisma.comic.update({
-      where: { id: comicId },
-      data: { updatedAt: new Date() },
-    }),
-  ]);
+  let newPdfUrl: string | undefined;
+  let uploadedFilePath: string | null = null;
 
-  return updatedChapter;
+  if (file) {
+    const fileExtension = file.originalname.split('.').pop();
+    const fileName = `${comicId}-${Date.now()}.${fileExtension}`;
+    const filePath = `${comicId}/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from(CHAPTERS_BUCKET)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        throw new Error(`Supabase upload error: ${uploadError.message}`);
+      }
+
+      uploadedFilePath = filePath;
+
+      const { data: urlData } = supabase.storage
+        .from(CHAPTERS_BUCKET)
+        .getPublicUrl(filePath);
+
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error('Could not get public URL for the uploaded file.');
+      }
+
+      newPdfUrl = urlData.publicUrl;
+    } catch (error: any) {
+      if (uploadedFilePath) {
+        await supabase.storage.from(CHAPTERS_BUCKET).remove([uploadedFilePath]);
+      }
+      console.error('Update chapter upload error:', error);
+      throw new Error(error.message || 'Failed to upload chapter PDF.');
+    }
+  }
+
+  const updatePayload: { title?: string; chapterNumber?: number; pdfUrl?: string } = {
+    ...data,
+  };
+  if (newPdfUrl) {
+    updatePayload.pdfUrl = newPdfUrl;
+  }
+
+  try {
+    const [updatedChapter] = await prisma.$transaction([
+      prisma.chapter.update({
+        where: { id: chapterId },
+        data: updatePayload,
+      }),
+      prisma.comic.update({
+        where: { id: comicId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+
+    if (newPdfUrl && existing.pdfUrl) {
+      try {
+        const url = new URL(existing.pdfUrl);
+        const pathMatch = url.pathname.match(new RegExp(`/object/public/${CHAPTERS_BUCKET}/(.+)$`));
+        if (pathMatch && pathMatch[1]) {
+          await supabase.storage.from(CHAPTERS_BUCKET).remove([pathMatch[1]]);
+        }
+      } catch (cleanupError) {
+        console.warn('Failed to delete old chapter PDF:', cleanupError);
+      }
+    }
+
+    return updatedChapter;
+  } catch (error: any) {
+    if (newPdfUrl && uploadedFilePath) {
+      await supabase.storage.from(CHAPTERS_BUCKET).remove([uploadedFilePath]);
+    }
+    throw error;
+  }
 };
 
 export const deleteChapter = async (chapterId: string, comicId: string) => {

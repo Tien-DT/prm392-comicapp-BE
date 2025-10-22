@@ -1,9 +1,22 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { protect, AuthRequest } from '../middlewares/auth.middleware';
 import * as comicService from '../services/comic.service';
+import * as userService from '../services/user.service';
 import { Response } from 'express';
 
 const router = Router();
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  },
+});
 
 /**
  * @swagger
@@ -63,11 +76,24 @@ router.get('/me', protect, async (req: AuthRequest, res: Response) => {
  *       401:
  *         description: Not authenticated
  */
-router.put('/me', protect, async (req: AuthRequest, res: Response) => {
+router.put('/me', protect, avatarUpload.single('avatar'), async (req: AuthRequest, res: Response) => {
   try {
-    // This would need a user service update method
-    res.status(200).json({ message: 'Update user not implemented yet' });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const username = typeof req.body?.username === 'string' ? req.body.username.trim() : undefined;
+
+    const updatedUser = await userService.updateUser(
+      userId,
+      { username },
+      req.file || undefined
+    );
+
+    res.status(200).json(updatedUser);
   } catch (error: any) {
+    console.error('[PUT /users/me] error:', error);
     res.status(500).json({ message: 'Error updating user profile', error: error.message });
   }
 });

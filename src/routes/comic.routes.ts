@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import * as comicController from '../controllers/comic.controller';
 import { protect } from '../middlewares/auth.middleware';
 import { optionalAuth } from '../middlewares/optionalAuth.middleware';
@@ -7,6 +8,17 @@ import chapterRouter from './chapter.routes';
 import reviewRouter from './review.routes';
 
 const router = Router();
+
+const coverUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  },
+});
 
 /**
  * @swagger
@@ -242,7 +254,7 @@ router.route('/:id')
    *       404:
    *         description: Comic not found.
    */
-  .put(protect, isAuthor, comicController.updateComic)
+  .put(protect, isAuthor, coverUpload.single('coverImage'), comicController.updateComic)
   /**
    * @swagger
    * /api/comics/{id}:
@@ -266,6 +278,12 @@ router.route('/:id')
    *         description: Comic not found.
    */
   .delete(protect, isAuthor, comicController.deleteComic);
+
+// View tracking (must be before nested routes to avoid conflicts)
+router.post('/:id/view', comicController.incrementView);
+
+// Upload cover image only (separate endpoint similar to chapter upload)
+router.post('/:id/cover', protect, isAuthor, coverUpload.single('coverImage'), comicController.uploadCover);
 
 // Nested routes
 router.use('/:id/chapters', chapterRouter);

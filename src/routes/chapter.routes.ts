@@ -148,7 +148,7 @@ router.route('/:chapterId')
    *       403:
    *         description: User is not the author.
    */
-  .put(protect, isAuthor, chapterController.updateChapter)
+  .put(protect, isAuthor, upload.single('chapterPdf'), chapterController.updateChapter)
   /**
    * @swagger
    * /api/comics/{id}/chapters/{chapterId}:

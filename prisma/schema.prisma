@@ -55,9 +55,17 @@ model Comic {
   id           String      @id @default(cuid())
   title        String
   description  String
-  coverImage   String
+  imageUrl     String
   status       ComicStatus @default(ONGOING)
   visibility   Visibility  @default(PUBLIC)
+  
+  // Statistics - cached for performance
+  viewCount      Int       @default(0)
+  likeCount      Int       @default(0)
+  averageRating  Float     @default(0)
+  totalReviews   Int       @default(0)
+  totalChapters  Int       @default(0)
+  
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -69,6 +77,15 @@ model Comic {
 
   categories     CategoryOnComic[]
   libraryEntries UserComicLibrary[]
+
+  // Indexes for performance
+  @@index([title])
+  @@index([status])
+  @@index([authorId])
+  @@index([visibility])
+  @@index([viewCount])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Category {
@@ -81,7 +98,7 @@ model Category {
 // Explicit many-to-many relation table for Comic and Category
 model CategoryOnComic {
   comicId    String
-  comic      Comic    @relation(fields: [comicId], references: [id])
+  comic      Comic    @relation(fields: [comicId], references: [id], onDelete: Cascade)
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
@@ -93,10 +110,14 @@ model Chapter {
   title         String
   chapterNumber Float
   pdfUrl        String
+  readCount     Int      @default(0)
   createdAt     DateTime @default(now())
 
   comicId String
-  comic   Comic  @relation(fields: [comicId], references: [id])
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+
+  @@index([comicId])
+  @@index([comicId, chapterNumber])
 }
 
 model Review {
@@ -110,7 +131,11 @@ model Review {
   user   User   @relation(fields: [userId], references: [id])
 
   comicId String
-  comic   Comic  @relation(fields: [comicId], references: [id])
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+
+  @@index([comicId])
+  @@index([userId])
+  @@unique([userId, comicId])
 }
 
 // Model for User's Library (Favorites, Reading Status, etc.)
@@ -124,7 +149,7 @@ model UserComicLibrary {
   userId  String
   user    User   @relation(fields: [userId], references: [id])
   comicId String
-  comic   Comic  @relation(fields: [comicId], references: [id])
+  comic   Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
 
   @@id([userId, comicId])
 }
