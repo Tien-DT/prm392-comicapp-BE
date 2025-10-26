@@ -25,8 +25,30 @@ interface CreateReviewData {
 export const createReview = async (data: CreateReviewData) => {
   const { comicId, userId, rating, comment } = data;
 
-  // Optional: Check if user has already reviewed this comic and handle it (e.g., allow update or prevent new review)
-  // For now, we allow multiple reviews.
+  console.log('🔍 [createReview service] Data:', { comicId, userId, rating, comment: comment?.substring(0, 50) });
+
+  // Check if comic exists
+  const comic = await prisma.comic.findUnique({
+    where: { id: comicId },
+  });
+
+  if (!comic) {
+    throw new Error('Comic not found');
+  }
+
+  // Check if user already reviewed this comic
+  const existingReview = await prisma.review.findUnique({
+    where: {
+      userId_comicId: {
+        userId,
+        comicId,
+      },
+    },
+  });
+
+  if (existingReview) {
+    throw new Error('You have already reviewed this comic');
+  }
 
   const newReview = await prisma.review.create({
     data: {
@@ -35,8 +57,14 @@ export const createReview = async (data: CreateReviewData) => {
       comic: { connect: { id: comicId } },
       user: { connect: { id: userId } },
     },
+    include: {
+      user: {
+        select: { id: true, username: true, avatar: true },
+      },
+    },
   });
 
+  console.log('✅ [createReview service] Success:', { reviewId: newReview.id });
   return newReview;
 };
 
