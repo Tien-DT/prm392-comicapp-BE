@@ -69,7 +69,19 @@ export const createReview = async (data: CreateReviewData) => {
 };
 
 export const deleteReview = async (reviewId: string) => {
+  console.log('🗑️ [deleteReview service] Deleting:', reviewId);
+  
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+  });
+
+  if (!review) {
+    throw new Error('Review not found');
+  }
+
   await prisma.review.delete({
     where: { id: reviewId },
   });
+  
+  console.log('✅ [deleteReview service] Success:', reviewId);
 };
